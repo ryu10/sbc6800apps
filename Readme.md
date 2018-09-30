@@ -1,10 +1,10 @@
-# SBC6800 Sample Applications#
+# SBC6800 Sample Applications
 
 ##### 2018 ryu10
 
 Apps for [SBC6800](https://www.seeedstudio.com/SBC6800-g-1078968) in the 6800 assembly language.
 
-1. Conway's life game
+1. Conway's Game of Life
 
 #### Files
 
