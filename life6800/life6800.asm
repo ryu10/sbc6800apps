@@ -1,6 +1,6 @@
 *
 * Conway's Game of Life
-* for SBC6800
+* for SBC6800 (Bitboard)
 * 2018 ryu10
 *
 *

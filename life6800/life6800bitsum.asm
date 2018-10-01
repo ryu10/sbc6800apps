@@ -1,6 +1,6 @@
 *
 * Conway's Game of Life
-* for SBC6800
+* for SBC6800 (Bit-sum)
 * 2018 ryu10
 *
 *
