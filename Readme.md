@@ -1,4 +1,4 @@
-# SBC6800 Sample Applications
+# SBC6800 Applications
 
 ##### 2018 ryu10
 
