@@ -1,6 +1,6 @@
 0001                               *
 0002                               * Conway's Game of Life
-0003                               * for SBC6800
+0003                               * for SBC6800 (Bitboard)
 0004                               * 2018 ryu10
 0005                               *
 0006                               *
@@ -182,63 +182,63 @@
 0182 0220 b7 04 81           [ 5 ]         staa kg
 0183 0223 f7 04 82           [ 5 ]         stab kh
 0184                               * calculate neighbor counts s2 and s3
-0185                               * Step 1. (xab a) = a + b, (xcd c) = c + d, ...
-0186                               * xab = a & b
+0185                               * Step 1. (xab ka) = ka + kb, (xcd kc) = kc + kd, ...
+0186                               * xab = ka & kb
 0187 0226 b6 04 7b           [ 4 ]         ldaa ka
 0188 0229 b4 04 7c           [ 4 ]         anda kb
 0189 022c b7 04 85           [ 5 ]         staa xab
-0190                               * a ^= b
+0190                               * ka ^= kb
 0191 022f b6 04 7b           [ 4 ]         ldaa ka
 0192 0232 b8 04 7c           [ 4 ]         eora kb
 0193 0235 b7 04 7b           [ 5 ]         staa ka
-0194                               * xcd = c & d
+0194                               * xcd = kc & kd
 0195 0238 b6 04 7d           [ 4 ]         ldaa kc
 0196 023b b4 04 7e           [ 4 ]         anda kd
 0197 023e b7 04 86           [ 5 ]         staa xcd
-0198                               * c ^= d
+0198                               * kc ^= kd
 0199 0241 b6 04 7d           [ 4 ]         ldaa kc
 0200 0244 b8 04 7e           [ 4 ]         eora kd
 0201 0247 b7 04 7d           [ 5 ]         staa kc
-0202                               * xef = e & f
+0202                               * xef = ke & kf
 0203 024a b6 04 7f           [ 4 ]         ldaa ke
 0204 024d b4 04 80           [ 4 ]         anda kf
 0205 0250 b7 04 87           [ 5 ]         staa xef
-0206                               * e ^= f
+0206                               * ke ^= kf
 0207 0253 b6 04 7f           [ 4 ]         ldaa ke
 0208 0256 b8 04 80           [ 4 ]         eora kf
 0209 0259 b7 04 7f           [ 5 ]         staa ke
-0210                               * xgh = g & h
+0210                               * xgh = kg & kh
 0211 025c b6 04 81           [ 4 ]         ldaa kg
 0212 025f b4 04 82           [ 4 ]         anda kh
 0213 0262 b7 04 88           [ 5 ]         staa xgh
-0214                               *g ^= h
+0214                               *kg ^= kh
 0215 0265 b6 04 81           [ 4 ]         ldaa kg
 0216 0268 b8 04 82           [ 4 ]         eora kh
 0217 026b b7 04 81           [ 5 ]         staa kg
-0218                               * Step 2. (c b a) = (xab a) + (xcd c)
-0219                               * d = a & c
+0218                               * Step 2. (kc kb ka) = (xab ka) + (xcd kc)
+0219                               * kd = ka & kc
 0220 026e b6 04 7b           [ 4 ]         ldaa ka
 0221 0271 b4 04 7d           [ 4 ]         anda kc
 0222 0274 b7 04 7e           [ 5 ]         staa kd
-0223                               * a ^= c
+0223                               * ka ^= kc
 0224 0277 b6 04 7b           [ 4 ]         ldaa ka
 0225 027a b8 04 7d           [ 4 ]         eora kc
 0226 027d b7 04 7b           [ 5 ]         staa ka
-0227                               * c = xab & xcd
+0227                               * kc = xab & xcd
 0228 0280 b6 04 85           [ 4 ]         ldaa xab
 0229 0283 b4 04 86           [ 4 ]         anda xcd
 0230 0286 b7 04 7d           [ 5 ]         staa kc
-0231                               * b = xab ^ xcd ^ d
+0231                               * kb = xab ^ xcd ^ kd
 0232 0289 b6 04 85           [ 4 ]         ldaa xab
 0233 028c b8 04 86           [ 4 ]         eora xcd
 0234 028f b8 04 7e           [ 4 ]         eora kd
 0235 0292 b7 04 7c           [ 5 ]         staa kb
-0236                               * Step 3. (g f e) = (xef e) + (xgh g)
-0237                               * h = e & g
+0236                               * Step 3. (kg kf ke) = (xef ke) + (xgh kg)
+0237                               * kh = ke & kg
 0238 0295 b6 04 7f           [ 4 ]         ldaa ke
 0239 0298 b4 04 81           [ 4 ]         anda kg
 0240 029b b7 04 82           [ 5 ]         staa kh
-0241                               * e ^= g
+0241                               * ke ^= kg
 0242 029e b6 04 7f           [ 4 ]         ldaa ke
 0243 02a1 b8 04 81           [ 4 ]         eora kg
 0244 02a4 b7 04 7f           [ 5 ]         staa ke
@@ -246,67 +246,67 @@
 0246 02a7 b6 04 87           [ 4 ]         ldaa xef
 0247 02aa b4 04 88           [ 4 ]         anda xgh
 0248 02ad b7 04 81           [ 5 ]         staa kg
-0249                               * f = xef ^ xgh ^ h
+0249                               * kf = xef ^ xgh ^ kh
 0250 02b0 b6 04 87           [ 4 ]         ldaa xef
 0251 02b3 b8 04 88           [ 4 ]         eora xgh
 0252 02b6 b8 04 82           [ 4 ]         eora kh
 0253 02b9 b7 04 80           [ 5 ]         staa kf
-0254                               * Step 4. (c b a) = (c b a) + (g f e)
-0255                               * d = a & e
+0254                               * Step 4. (kc kb ka) = (kc kb ka) + (kg kf ke)
+0255                               * kd = ka & ke
 0256 02bc b6 04 7b           [ 4 ]         ldaa ka
 0257 02bf b4 04 7f           [ 4 ]         anda ke
 0258 02c2 b7 04 7e           [ 5 ]         staa kd
-0259                               * a ^= e
+0259                               * ka ^= ke
 0260 02c5 b6 04 7b           [ 4 ]         ldaa ka
 0261 02c8 b8 04 7f           [ 4 ]         eora ke
 0262 02cb b7 04 7b           [ 5 ]         staa ka
-0263                               * h = b & f
+0263                               * kh = kb & kf
 0264 02ce b6 04 7c           [ 4 ]         ldaa kb
 0265 02d1 b4 04 80           [ 4 ]         anda kf
 0266 02d4 b7 04 82           [ 5 ]         staa kh
-0267                               * b ^= f
+0267                               * kb ^= kf
 0268 02d7 b6 04 7c           [ 4 ]         ldaa kb
 0269 02da b8 04 80           [ 4 ]         eora kf
 0270 02dd b7 04 7c           [ 5 ]         staa kb
-0271                               * h |= b & d ;; h = (b & f) | ((b ^ f) & (a & e))
+0271                               * kh |= kb & kd ;; kh = (kb & kf) | ((kb ^ kf) & (ka & ke))
 0272 02e0 b6 04 7c           [ 4 ]         ldaa kb
 0273 02e3 b4 04 7e           [ 4 ]         anda kd
 0274 02e6 b7 04 6f           [ 5 ]         staa temp_word
 0275 02e9 b6 04 82           [ 4 ]         ldaa kh
 0276 02ec ba 04 6f           [ 4 ]         oraa temp_word
 0277 02ef b7 04 82           [ 5 ]         staa kh
-0278                               * b ^= d
+0278                               * kb ^= kd
 0279 02f2 b6 04 7c           [ 4 ]         ldaa kb
 0280 02f5 b8 04 7e           [ 4 ]         eora kd
 0281 02f8 b7 04 7c           [ 5 ]         staa kb
-0282                               * c ^= g ^ h
+0282                               * kc ^= kg ^ kh
 0283 02fb b6 04 7d           [ 4 ]         ldaa kc
 0284 02fe b8 04 82           [ 4 ]         eora kh
 0285 0301 b8 04 81           [ 4 ]         eora kg
 0286 0304 b7 04 7d           [ 5 ]         staa kc
-0287                               * Step 5. Calc. s2 and s3 from (c b a)
-0288                               * x = ~c & b
+0287                               * Step 5. Calc. s2 and s3 from (kc kb ka)
+0288                               * temp_word = ~kc & kb
 0289 0307 b6 04 7d           [ 4 ]         ldaa kc
 0290 030a 88 ff              [ 2 ]         eora #$ff
 0291 030c b4 04 7c           [ 4 ]         anda kb
 0292 030f b7 04 6f           [ 5 ]         staa temp_word
-0293                               * s2 = x & ~a
+0293                               * s2 = temp_word & ~ka
 0294 0312 b6 04 7b           [ 4 ]         ldaa ka
 0295 0315 88 ff              [ 2 ]         eora #$ff
 0296 0317 b4 04 6f           [ 4 ]         anda temp_word
 0297 031a b7 04 83           [ 5 ]         staa s2
-0298                               * s3 = x & a
+0298                               * s3 = temp_word & ka
 0299 031d b6 04 6f           [ 4 ]         ldaa temp_word
 0300 0320 b4 04 7b           [ 4 ]         anda ka
 0301 0323 b7 04 84           [ 5 ]         staa s3
-0302                               * Final Step. Return (curr & s2) | s3
+0302                               * Final Step. [next_adrs] = ([curr_adrs] & s2) | s3
 0303 0326 fe 04 75           [ 5 ]         ldx curr_adrs
 0304 0329 a6 00              [ 5 ]         ldaa 0,x
 0305 032b b4 04 83           [ 4 ]         anda s2
 0306 032e ba 04 84           [ 4 ]         oraa s3
 0307 0331 fe 04 77           [ 5 ]         ldx next_adrs
 0308 0334 a7 00              [ 6 ]         staa 0,x
-0309                               * increment the buf pointers and test if reached to the end
+0309                               * increment the buf pointers and test
 0310 0336 fe 04 75           [ 5 ]         ldx curr_adrs   ; inc current adrs
 0311 0339 08                 [ 4 ]         inx
 0312 033a ff 04 75           [ 6 ]         stx curr_adrs
