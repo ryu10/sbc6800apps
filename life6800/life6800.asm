@@ -182,63 +182,63 @@ update3:
         staa kg
         stab kh
 * calculate neighbor counts s2 and s3
-* Step 1. (xab a) = a + b, (xcd c) = c + d, ...
-* xab = a & b
+* Step 1. (xab ka) = ka + kb, (xcd kc) = kc + kd, ...
+* xab = ka & kb
         ldaa ka
         anda kb
         staa xab
-* a ^= b
+* ka ^= kb
         ldaa ka
         eora kb
         staa ka
-* xcd = c & d
+* xcd = kc & kd
         ldaa kc
         anda kd
         staa xcd
-* c ^= d
+* kc ^= kd
         ldaa kc
         eora kd
         staa kc
-* xef = e & f
+* xef = ke & kf
         ldaa ke
         anda kf
         staa xef
-* e ^= f
+* ke ^= kf
         ldaa ke
         eora kf
         staa ke
-* xgh = g & h
+* xgh = kg & kh
         ldaa kg
         anda kh
         staa xgh
-*g ^= h
+*kg ^= kh
         ldaa kg
         eora kh
         staa kg
-* Step 2. (c b a) = (xab a) + (xcd c)
-* d = a & c
+* Step 2. (kc kb ka) = (xab ka) + (xcd kc)
+* kd = ka & kc
         ldaa ka
         anda kc
         staa kd
-* a ^= c
+* ka ^= kc
         ldaa ka
         eora kc
         staa ka
-* c = xab & xcd
+* kc = xab & xcd
         ldaa xab
         anda xcd
         staa kc
-* b = xab ^ xcd ^ d
+* kb = xab ^ xcd ^ kd
         ldaa xab
         eora xcd
         eora kd
         staa kb
-* Step 3. (g f e) = (xef e) + (xgh g)
-* h = e & g
+* Step 3. (kg kf ke) = (xef ke) + (xgh kg)
+* kh = ke & kg
         ldaa ke
         anda kg
         staa kh
-* e ^= g
+* ke ^= kg
         ldaa ke
         eora kg
         staa ke
@@ -246,67 +246,67 @@ update3:
         ldaa xef
         anda xgh
         staa kg
-* f = xef ^ xgh ^ h
+* kf = xef ^ xgh ^ kh
         ldaa xef
         eora xgh
         eora kh
         staa kf
-* Step 4. (c b a) = (c b a) + (g f e)
-* d = a & e
+* Step 4. (kc kb ka) = (kc kb ka) + (kg kf ke)
+* kd = ka & ke
         ldaa ka
         anda ke
         staa kd
-* a ^= e
+* ka ^= ke
         ldaa ka
         eora ke
         staa ka
-* h = b & f
+* kh = kb & kf
         ldaa kb
         anda kf
         staa kh
-* b ^= f
+* kb ^= kf
         ldaa kb
         eora kf
         staa kb
-* h |= b & d ;; h = (b & f) | ((b ^ f) & (a & e))
+* kh |= kb & kd ;; kh = (kb & kf) | ((kb ^ kf) & (ka & ke))
         ldaa kb
         anda kd
         staa temp_word
         ldaa kh
         oraa temp_word
         staa kh
-* b ^= d
+* kb ^= kd
         ldaa kb
         eora kd
         staa kb
-* c ^= g ^ h
+* kc ^= kg ^ kh
         ldaa kc
         eora kh
         eora kg
         staa kc
-* Step 5. Calc. s2 and s3 from (c b a)
-* x = ~c & b
+* Step 5. Calc. s2 and s3 from (kc kb ka)
+* temp_word = ~kc & kb
         ldaa kc
         eora #$ff
         anda kb
         staa temp_word
-* s2 = x & ~a
+* s2 = temp_word & ~ka
         ldaa ka
         eora #$ff
         anda temp_word
         staa s2
-* s3 = x & a
+* s3 = temp_word & ka
         ldaa temp_word
         anda ka
         staa s3
-* Final Step. Return (curr & s2) | s3
+* Final Step. [next_adrs] = ([curr_adrs] & s2) | s3
         ldx curr_adrs
         ldaa 0,x
         anda s2
         oraa s3
         ldx next_adrs
         staa 0,x
-* increment the buf pointers and test if reached to the end
+* increment the buf pointers and test
         ldx curr_adrs   ; inc current adrs
         inx
         stx curr_adrs
