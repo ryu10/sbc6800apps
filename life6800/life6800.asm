@@ -211,7 +211,7 @@ update3:
         ldaa kg
         anda kh
         staa xgh
-*kg ^= kh
+* kg ^= kh
         ldaa kg
         eora kh
         staa kg
@@ -242,7 +242,7 @@ update3:
         ldaa ke
         eora kg
         staa ke
-* g = xef & xgh
+* kg = xef & xgh
         ldaa xef
         anda xgh
         staa kg

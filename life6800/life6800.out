@@ -211,7 +211,7 @@
 0211 025c b6 04 81           [ 4 ]         ldaa kg
 0212 025f b4 04 82           [ 4 ]         anda kh
 0213 0262 b7 04 88           [ 5 ]         staa xgh
-0214                               *kg ^= kh
+0214                               * kg ^= kh
 0215 0265 b6 04 81           [ 4 ]         ldaa kg
 0216 0268 b8 04 82           [ 4 ]         eora kh
 0217 026b b7 04 81           [ 5 ]         staa kg
@@ -242,7 +242,7 @@
 0242 029e b6 04 7f           [ 4 ]         ldaa ke
 0243 02a1 b8 04 81           [ 4 ]         eora kg
 0244 02a4 b7 04 7f           [ 5 ]         staa ke
-0245                               * g = xef & xgh
+0245                               * kg = xef & xgh
 0246 02a7 b6 04 87           [ 4 ]         ldaa xef
 0247 02aa b4 04 88           [ 4 ]         anda xgh
 0248 02ad b7 04 81           [ 5 ]         staa kg
