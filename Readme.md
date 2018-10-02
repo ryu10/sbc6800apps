@@ -4,17 +4,7 @@
 
 Apps for [SBC6800](https://www.seeedstudio.com/SBC6800-g-1078968) in the 6800 assembly language.
 
-* Conway's Game of Life
-
-#### Files
-
-* life6800 (folder) : Lifegame SBC6800
-  * life6800.asm         : source
-  * life6800.out         : assembly log
-  * life6800.s19         : object
-  * life6800bitsum.asm   : source
-  * life6800bitsum.out   : assembly log
-  * life6800bitsum.s19   : object
+* Conway's Game of Life (life6800)
 
 #### Build Environment
 
