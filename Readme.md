@@ -4,7 +4,7 @@
 
 Apps for [SBC6800](https://www.seeedstudio.com/SBC6800-g-1078968) in the 6800 assembly language.
 
-* Conway's Game of Life ([life6800/])
+* Conway's Game of Life ([life6800](https://github.com/ryu10/sbc6800apps/tree/master/life6800))
 
 #### Build Environment
 
