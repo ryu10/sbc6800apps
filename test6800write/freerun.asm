@@ -8,7 +8,7 @@
 outch   equ $e075
 * Consts
 STRX_BASE equ $0200 ; base address for stx block
-STRA_BASE equ $0300 ; base address for STRA block
+STRA_BASE equ $0300 ; base address for staa block
 CH_X equ 'X
 CH_A equ 'A
 *
