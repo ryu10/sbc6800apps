@@ -1,0 +1,16 @@
+0001                         * swi.asm
+0002                         *
+0003                         * 6800 swi Test
+0004                         * 2019 ryu10
+0005                         *
+0006                         * Mikbug Entries
+0007 e075                    outch   equ $e075
+0008                         *
+0009 0400                            org $0400
+0010                         start:
+0011 0400 3f                         swi ; immediately return to Mikbug
+0012                         *       end
+outch      e075
+start      0400
+outch      e075 *0007 
+start      0400 *0010 

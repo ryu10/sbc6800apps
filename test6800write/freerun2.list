@@ -1,0 +1,54 @@
+0001                         * freerun.asm
+0002                         *
+0003                         * 6800 Free Run Test #2
+0004                         * Write to 2 pages
+0005                         * 2019 ryu10
+0006                         *
+0007                         * Mikbug Entries
+0008 e075                    outch   equ $e075
+0009                         * Consts
+0010 0200                    STRX_BASE equ $0200 ; base address for stx block
+0011 0300                    STRA_BASE equ $0300 ; base address for STRA block
+0012 0058                    CH_X equ 'X
+0013 0041                    CH_A equ 'A
+0014                         *
+0015 0400                            org $0400
+0016                         start:
+0017 0400 ce 02 00                   ldx #STRX_BASE ; write to ($0200)-($02FF)
+0018                         l_stx:
+0019 0403 ef 00                      stx 0,x
+0020 0405 08                         inx
+0021 0406 08                         inx
+0022 0407 8c 03 00                   cpx #$0300
+0023 040a 26 f7                      bne l_stx
+0024 040c 86 58                      ldaa #CH_X
+0025 040e bd e0 75                   jsr outch
+0026                         *
+0027 0411 4f                         clra
+0028 0412 ce 03 00                   ldx #STRA_BASE  ; write to ($0300)-($03FF)
+0029                         l1:
+0030 0415 a7 00                      staa 0,x
+0031 0417 08                         inx
+0032 0418 4c                         inca
+0033 0419 26 fa                      bne l1
+0034 041b 86 41                      ldaa #CH_A
+0035 041d bd e0 75                   jsr outch
+0036                         *
+0037 0420 7e 04 00                   jmp start ; do forever
+0038                         *       end
+CH_A       0041
+CH_X       0058
+STRA_BASE  0300
+STRX_BASE  0200
+l1         0415
+l_stx      0403
+outch      e075
+start      0400
+CH_A       0041 *0013 0034 
+CH_X       0058 *0012 0024 
+STRA_BASE  0300 *0011 0028 
+STRX_BASE  0200 *0010 0017 
+l1         0415 *0029 0033 
+l_stx      0403 *0018 0023 
+outch      e075 *0008 0025 0035 
+start      0400 *0016 0037 
