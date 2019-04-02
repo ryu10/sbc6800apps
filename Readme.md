@@ -1,6 +1,6 @@
 # SBC6800 Applications
 
-##### 2018 ryu10
+##### 2019 ryu10
 
 Apps for [SBC6800](https://www.seeedstudio.com/SBC6800-g-1078968) in the 6800 assembly language.
 
