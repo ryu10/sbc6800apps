@@ -1,0 +1,39 @@
+0001                         * fillgfx.asm
+0002                         *
+0003                         * 6800 Fill the virtual vram
+0004                         * Fill 0x4000-0x657f with 0xff
+0005                         * 2019 ryu10
+0006                         *
+0007                         * Mikbug Entries
+0008 e075                    outch   equ $e075
+0009                         * Consts
+0010 4000                    VRAM_START equ $4000
+0011 6580                    VRAM_END equ $6580
+0012 0058                    CH_X    equ 'X
+0013                         *
+0014 0400                            org $0400
+0015                         start:
+0016 0400 ce 40 00                   ldx #VRAM_START
+0017 0403 86 ff                      ldaa #$ff
+0018                         l_stx:
+0019 0405 a7 00                      staa 0,x
+0020 0407 08                         inx
+0021 0408 8c 65 80                   cpx #VRAM_END
+0022 040b 26 f8                      bne l_stx
+0023 040d 86 58                      ldaa #CH_X
+0024 040f bd e0 75                   jsr outch
+0025                         *
+0026 0412 3f                         swi
+0027                         *       end
+CH_X       0058
+VRAM_END   6580
+VRAM_START 4000
+l_stx      0405
+outch      e075
+start      0400
+CH_X       0058 *0012 0023 
+VRAM_END   6580 *0011 0021 
+VRAM_START 4000 *0010 0016 
+l_stx      0405 *0018 0022 
+outch      e075 *0008 0024 
+start      0400 *0015 
