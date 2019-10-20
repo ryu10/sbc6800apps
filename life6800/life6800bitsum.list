@@ -1,0 +1,601 @@
+0001                         *
+0002                         * Conway's Game of Life
+0003                         * for SBC6800 (Bit-sum)
+0004                         * 2018 ryu10
+0005                         *
+0006                         *
+0007                         * Mikbug Entries
+0008 e075                    outch   equ $e075
+0009 e07e                    pdata1  equ $e07e
+0010 e0bf                    out2h   equ $e0bf
+0011                         *
+0012                         * Constants
+0013 001b                    esc     equ $1b
+0014 0004                    linebyte equ 4  ; widht of the buffer in bytes
+0015 0020                    bwidth  equ 32   ; px width of the buffer
+0016 0010                    bheight equ 16   ; height of the buffer
+0017 0040                    buf_len equ bheight*linebyte   ; buffer length in bytes
+0018 0003                    blen_mask equ linebyte-1 ; max# of bytes in a line
+0019                         *
+0020 0100                            org $0100
+0021 0100 ce 05 00                   ldx #screen_buf1
+0022 0103 ff 03 ba                   stx curr_bufp
+0023 0106 ce 05 40                   ldx #screen_buf2
+0024 0109 ff 03 bc                   stx next_bufp
+0025 010c 4f                         clra
+0026 010d b7 03 b4                   staa gen_ctr
+0027 0110 b7 03 b5                   staa gen_ctr+1
+0028 0113 b7 03 b6                   staa gen_ctr+2
+0029 0116 b7 03 b7                   staa gen_ctr+3
+0030 0119 ce 03 6a                   ldx #screen_clr_d
+0031 011c bd e0 7e                   jsr pdata1
+0032 011f ce 03 73                   ldx #screen_home_d
+0033 0122 bd e0 7e                   jsr pdata1
+0034 0125 ce 03 86                   ldx #title_str_d
+0035 0128 bd e0 7e                   jsr pdata1
+0036 012b bd 01 3d                   jsr init_screen
+0037 012e bd 01 61           loop:   jsr mirror_edges ; make it toroidal
+0038 0131 bd 02 eb                   jsr print_screen
+0039 0134 bd 01 c6                   jsr gen_update ; update the next_buf based on the game rules
+0040 0137 bd 03 57                   jsr swap_buffer
+0041 013a 20 f2                      bra loop
+0042 013c 3f                         swi                 ; end main
+0043                         *
+0044                         init_screen:
+0045 013d ce 03 d2                   ldx #screen_buf_init
+0046 0140 ff 03 be                   stx curr_adrs ; as a temporary workspace
+0047 0143 fe 03 ba                   ldx curr_bufp
+0048 0146 ff 03 b8                   stx temp_word
+0049 0149 86 40                      ldaa #buf_len
+0050                         init_scr1:
+0051 014b fe 03 be                   ldx curr_adrs
+0052 014e e6 00                      ldab 0,x
+0053 0150 08                         inx
+0054 0151 ff 03 be                   stx curr_adrs
+0055 0154 fe 03 b8                   ldx temp_word
+0056 0157 e7 00                      stab 0,x
+0057 0159 08                         inx
+0058 015a ff 03 b8                   stx temp_word
+0059 015d 4a                         deca
+0060 015e 26 eb                      bne init_scr1
+0061 0160 39                         rts
+0062                         *
+0063                         mirror_edges:
+0064                         * mirror the buffer edges to make it a torus
+0065                         * draw top & bottom edges
+0066 0161 fe 03 ba                   ldx curr_bufp
+0067 0164 c6 04                      ldab #linebyte ; repeat four times
+0068                         mirr_topbtm:
+0069 0166 a6 04                      ldaa linebyte,x
+0070 0168 a7 3c                      staa buf_len-linebyte,x ; mirror top to bottom edge
+0071 016a a6 38                      ldaa buf_len-linebyte-linebyte,x
+0072 016c a7 00                      staa 0,x ; mirror bottom to top edge
+0073 016e 08                         inx
+0074 016f 5a                         decb
+0075 0170 26 f4                      bne mirr_topbtm
+0076                         * draw left & right edges
+0077 0172 fe 03 ba                   ldx curr_bufp
+0078 0175 86 04                      ldaa #linebyte
+0079 0177 08                 mirr4:  inx
+0080 0178 4a                         deca
+0081 0179 26 fc                      bne mirr4 ; start x from curr_bufp+linebyte (line#1)
+0082 017b c6 0e                      ldab #bheight-2 ; repeat 14 times
+0083                         mirr_leftrt:
+0084 017d 37                         pshb ; iter counter
+0085 017e a6 00                      ldaa 0,x
+0086 0180 e6 03                      ldab linebyte-1,x
+0087 0182 49                         rola ; bit6->bit7
+0088 0183 56                         rorb
+0089 0184 49                         rola ; bit7->carry
+0090 0185 59                         rolb ; carry->bit0
+0091 0186 e7 03                      stab linebyte-1,x ; copy left to right edge
+0092 0188 a6 00                      ldaa 0,x ; restore left
+0093 018a 56                         rorb ; bit1->bit0
+0094 018b 49                         rola
+0095 018c 56                         rorb ; bit0->carry
+0096 018d 46                         rora ; carry->bit7
+0097 018e a7 00                      staa 0,x ; copy right to left edge
+0098 0190 86 04                      ldaa #linebyte
+0099 0192 08                 mirr5:  inx
+0100 0193 4a                         deca
+0101 0194 26 fc                      bne mirr5
+0102 0196 33                         pulb ; iter counter
+0103 0197 5a                         decb
+0104 0198 26 e3                      bne mirr_leftrt
+0105                         * draw four corners
+0106 019a fe 03 ba                   ldx curr_bufp
+0107 019d a6 04                      ldaa linebyte,x ; topleft to bottomright
+0108 019f e6 3f                      ldab buf_len-1,x
+0109 01a1 49                         rola ; bit6->7
+0110 01a2 56                         rorb
+0111 01a3 49                         rola ; bit7->carry
+0112 01a4 59                         rolb ; carry->bit0
+0113 01a5 e7 3f                      stab buf_len-1,x
+0114 01a7 a6 3b                      ldaa buf_len-linebyte-1,x ; bottomright to topleft
+0115 01a9 e6 00                      ldab 0,x
+0116 01ab 46                         rora ; bit1->bit0
+0117 01ac 59                         rolb
+0118 01ad 46                         rora ; bit0->carry
+0119 01ae 56                         rorb ; carry->MSB
+0120 01af e7 00                      stab 0,x
+0121 01b1 a6 07                      ldaa 2*linebyte-1,x; topright to bottomleft
+0122 01b3 e6 3c                      ldab buf_len-linebyte,x
+0123 01b5 46                         rora ; bit1->bit0
+0124 01b6 59                         rolb
+0125 01b7 46                         rora ; bit0->carry
+0126 01b8 56                         rorb ; carry->MSB
+0127 01b9 e7 3c                      stab buf_len-linebyte,x
+0128 01bb a6 38                      ldaa buf_len-linebyte-linebyte,x; bottomleft to topright
+0129 01bd e6 03                      ldab linebyte-1,x
+0130 01bf 49                         rola ; bit6->7
+0131 01c0 56                         rorb
+0132 01c1 49                         rola ; bit7->carry
+0133 01c2 59                         rolb ; carry->bit0
+0134 01c3 e7 03                      stab linebyte-1,x
+0135 01c5 39                         rts
+0136                         *
+0137                         gen_update:
+0138 01c6 fe 03 ba                   ldx curr_bufp
+0139 01c9 86 04                      ldaa #linebyte
+0140 01cb b7 03 c2                   staa curr_off
+0141                         update0:
+0142 01ce 08                         inx
+0143 01cf 4a                         deca
+0144 01d0 26 fc                      bne update0
+0145 01d2 ff 03 be                   stx curr_adrs ; start from line 1
+0146 01d5 fe 03 bc                   ldx next_bufp
+0147 01d8 86 04                      ldaa #linebyte
+0148                         update1:
+0149 01da 08                         inx
+0150 01db 4a                         deca
+0151 01dc 26 fc                      bne update1
+0152 01de ff 03 c0                   stx next_adrs ; start from line 1
+0153                         * get the shifted frames ka-kh
+0154                         update_loop1:
+0155 01e1 fe 03 be                   ldx curr_adrs
+0156 01e4 86 04                      ldaa #linebyte
+0157                         update2:
+0158 01e6 09                         dex
+0159 01e7 4a                         deca
+0160 01e8 26 fc                      bne update2
+0161 01ea bd 02 9e                   jsr get3frames ; x = prev line (upper)
+0162 01ed b6 03 b8                   ldaa temp_word
+0163 01f0 b7 03 c4                   staa ka
+0164 01f3 b6 03 b9                   ldaa temp_word+1
+0165 01f6 b7 03 c5                   staa kb
+0166 01f9 f7 03 c6                   stab kc
+0167 01fc fe 03 be                   ldx curr_adrs
+0168 01ff bd 02 9e                   jsr get3frames ; x = curr line (middle)
+0169 0202 b6 03 b8                   ldaa temp_word
+0170 0205 b7 03 c7                   staa kd
+0171 0208 f7 03 c8                   stab ke
+0172 020b fe 03 be                   ldx curr_adrs
+0173 020e 86 04                      ldaa #linebyte
+0174                         update3:
+0175 0210 08                         inx
+0176 0211 4a                         deca
+0177 0212 26 fc                      bne update3
+0178 0214 bd 02 9e                   jsr get3frames ; x = next line (lower)
+0179 0217 b6 03 b8                   ldaa temp_word
+0180 021a b7 03 c9                   staa kf
+0181 021d b6 03 b9                   ldaa temp_word+1
+0182 0220 b7 03 ca                   staa kg
+0183 0223 f7 03 cb                   stab kh
+0184                         * calculate neighbor counts and update next byte
+0185 0226 fe 03 be                   ldx curr_adrs
+0186 0229 a6 00                      ldaa 0,x
+0187 022b b7 03 b8                   staa temp_word ; save curr byte
+0188 022e 86 08                      ldaa #8
+0189                         upd_byte:
+0190 0230 36                         psha
+0191 0231 5f                         clrb
+0192 0232 ce 03 c4                   ldx #ka
+0193 0235 86 08                      ldaa #8
+0194                         upd_bit:
+0195 0237 36                         psha
+0196 0238 a6 00                      ldaa 0,x ; load ka ... kh
+0197 023a 49                         rola
+0198 023b 24 01                      bcc upd_b1
+0199 023d 5c                         incb
+0200 023e a7 00              upd_b1: staa 0,x
+0201 0240 08                         inx
+0202 0241 32                         pula
+0203 0242 4a                         deca
+0204 0243 26 f2                      bne upd_bit
+0205                         * at this point AccB contains the neighbor count
+0206 0245 c1 02                      cmpb #2
+0207 0247 26 10                      bne upd_b21
+0208 0249 fe 03 be                   ldx curr_adrs
+0209 024c a6 00                      ldaa 0,x ; load curr
+0210 024e 49                         rola   ; count=2, need to check curr
+0211 024f 24 14                      bcc upd_b22
+0212 0251 fe 03 c0                   ldx next_adrs
+0213 0254 a6 00                      ldaa 0,x ; load next
+0214 0256 0d                         sec    ; count=2, current=1 -> set next bit
+0215 0257 20 12                      bra upd_b3
+0216                         upd_b21:
+0217 0259 c1 03                      cmpb #3
+0218 025b 26 08                      bne upd_b22
+0219 025d fe 03 c0                   ldx next_adrs
+0220 0260 a6 00                      ldaa 0,x ; load next
+0221 0262 0d                         sec      ; count = 3 -> set next bit
+0222 0263 20 06                      bra upd_b3
+0223                         upd_b22:
+0224 0265 fe 03 c0                   ldx next_adrs
+0225 0268 a6 00                      ldaa 0,x ; load next
+0226 026a 0c                         clc      ; otherwise -> clear next bit
+0227                         upd_b3:
+0228 026b 49                         rola
+0229 026c a7 00                      staa 0,x ; store next
+0230 026e fe 03 be                   ldx curr_adrs
+0231 0271 a6 00                      ldaa 0,x
+0232 0273 49                         rola     ; rotate curr
+0233 0274 a7 00                      staa 0,x
+0234 0276 32                         pula
+0235 0277 4a                         deca
+0236 0278 26 b6                      bne upd_byte
+0237                         * rotate ops done, restore curr
+0238 027a fe 03 be                   ldx curr_adrs
+0239 027d b6 03 b8                   ldaa temp_word
+0240 0280 a7 00                      staa 0,x
+0241                         * increment the buf pointers and test if reached to the end
+0242                         *        ldx curr_adrs   ; inc current adrs
+0243 0282 08                         inx
+0244 0283 ff 03 be                   stx curr_adrs
+0245 0286 fe 03 c0                   ldx next_adrs
+0246 0289 08                         inx
+0247 028a ff 03 c0                   stx next_adrs
+0248 028d b6 03 c2                   ldaa curr_off
+0249 0290 4c                         inca
+0250 0291 b7 03 c2                   staa curr_off
+0251 0294 8b 04                      adda #linebyte ; add one line (exit loop at maxline -1)
+0252 0296 81 40                      cmpa #buf_len
+0253 0298 27 03                      beq update4
+0254 029a 7e 01 e1                   jmp update_loop1
+0255                         update4:
+0256 029d 39                         rts
+0257                         * get3frames, x=input, temp_word=left&mid frames, b=right frame
+0258                         get3frames:
+0259 029e 09                         dex
+0260 029f a6 00                      ldaa 0,x ; get left byte
+0261 02a1 e6 01                      ldab 1,x ; get mid byte
+0262 02a3 f7 03 b9                   stab temp_word+1 ; mid frame
+0263 02a6 46                         rora
+0264 02a7 56                         rorb
+0265 02a8 f7 03 b8                   stab temp_word ; left frame
+0266 02ab 59                         rolb ; restore mid byte
+0267 02ac a6 02                      ldaa 2,x ; get right byte
+0268 02ae 49                         rola
+0269 02af 59                         rolb ; b = righ frame
+0270 02b0 08                         inx ; restore x
+0271 02b1 39                         rts
+0272                         *
+0273                         print_gen_ctr:
+0274 02b2 bd 02 c5                   jsr inc_gen_ctr
+0275 02b5 ce 03 b4                   ldx #gen_ctr
+0276 02b8 bd e0 bf                   jsr out2h
+0277 02bb bd e0 bf                   jsr out2h
+0278 02be bd e0 bf                   jsr out2h
+0279 02c1 bd e0 bf                   jsr out2h
+0280 02c4 39                         rts
+0281                         *
+0282                         inc_gen_ctr:
+0283 02c5 b6 03 b7                   ldaa gen_ctr+3
+0284 02c8 0c                         clc
+0285 02c9 89 01                      adca #1
+0286 02cb 19                         daa
+0287 02cc b7 03 b7                   staa gen_ctr+3
+0288 02cf b6 03 b6                   ldaa gen_ctr+2
+0289 02d2 89 00                      adca #0
+0290 02d4 19                         daa
+0291 02d5 b7 03 b6                   staa gen_ctr+2
+0292 02d8 b6 03 b5                   ldaa gen_ctr+1
+0293 02db 89 00                      adca #0
+0294 02dd 19                         daa
+0295 02de b7 03 b5                   staa gen_ctr+1
+0296 02e1 b6 03 b4                   ldaa gen_ctr
+0297 02e4 89 00                      adca #0
+0298 02e6 19                         daa
+0299 02e7 b7 03 b4                   staa gen_ctr
+0300 02ea 39                         rts
+0301                         *
+0302                         print_screen:
+0303 02eb ce 03 73                   ldx #screen_home_d ; move cursor to home
+0304 02ee bd e0 7e                   jsr pdata1
+0305 02f1 ce 03 a5                   ldx #skiptitle_str_d ; skip title text
+0306 02f4 bd e0 7e                   jsr pdata1
+0307 02f7 bd 02 b2                   jsr print_gen_ctr ; print ctr next to title
+0308 02fa ce 03 7a                   ldx #screen_home1_d ; move cursor to home
+0309 02fd bd e0 7e                   jsr pdata1
+0310 0300 ce 03 6f                   ldx #screen_clr1_d ; clear the rest of the screen
+0311 0303 bd e0 7e                   jsr pdata1
+0312 0306 fe 03 ba                   ldx curr_bufp ; init pointers
+0313 0309 ff 03 be                   stx curr_adrs
+0314 030c 7f 03 c2                   clr curr_off
+0315                         read_position:
+0316 030f fe 03 be                   ldx curr_adrs ; print contents with loop
+0317 0312 a6 00                      ldaa 0,x
+0318 0314 26 08                      bne rp0  ; contains dots
+0319 0316 ce 03 81                   ldx #skip8_d ; empty, skip 8px
+0320 0319 bd e0 7e                   jsr pdata1
+0321 031c 20 15                      bra rp3
+0322 031e c6 08              rp0:    ldab #8      ; draw 8 pix
+0323 0320 49                 rp1:    rola
+0324 0321 36                         psha
+0325 0322 37                         pshb
+0326 0323 24 04                      bcc rp20 ; carry flg stores rola result
+0327 0325 86 2a                      ldaa #'*
+0328 0327 20 02                      bra rp2
+0329 0329 86 20              rp20:   ldaa #$20 ; space char
+0330 032b bd e0 75           rp2:    jsr outch
+0331 032e 33                         pulb ; bit pos count
+0332 032f 32                         pula ; bit pattern
+0333 0330 5a                         decb
+0334 0331 26 ed                      bne rp1
+0335 0333 b6 03 c2           rp3:    ldaa curr_off; test and print eol
+0336 0336 c6 04                      ldab #linebyte
+0337 0338 84 03                      anda #blen_mask
+0338 033a 81 03                      cmpa #blen_mask
+0339 033c 26 06                      bne rp4
+0340 033e ce 03 b1                   ldx #crlf_d
+0341 0341 bd e0 7e                   jsr pdata1
+0342 0344 fe 03 be           rp4:    ldx curr_adrs
+0343 0347 08                         inx
+0344 0348 ff 03 be                   stx curr_adrs
+0345 034b b6 03 c2                   ldaa curr_off
+0346 034e 4c                         inca
+0347 034f b7 03 c2                   staa curr_off
+0348 0352 81 40                      cmpa #buf_len
+0349 0354 26 b9                      bne read_position
+0350 0356 39                         rts
+0351                         * Swap screen buffers
+0352                         swap_buffer:
+0353 0357 fe 03 ba                   ldx curr_bufp
+0354 035a ff 03 b8                   stx temp_word
+0355 035d fe 03 bc                   ldx next_bufp
+0356 0360 ff 03 ba                   stx curr_bufp
+0357 0363 fe 03 b8                   ldx temp_word
+0358 0366 ff 03 bc                   stx next_bufp
+0359 0369 39                         rts
+0360                         * Data area
+0361                         screen_clr_d:
+0362 036a 1b 5b 32 4a 04             fcb esc,'[,'2,'J,4
+0363                         screen_clr1_d:
+0364 036f 1b 5b 4a 04                fcb esc,'[,'J,4
+0365                         screen_home_d:
+0366 0373 1b 5b 31 3b 31 48          fcb esc,'[,'1,';,'1,'H,4
+     04
+0367                         screen_home1_d:
+0368 037a 1b 5b 32 3b 30 48          fcb esc,'[,'2,';,'0,'H,4
+     04
+0369                         skip8_d:
+0370 0381 1b 5b 38 43 04             fcb esc,'[,'8,'C,4
+0371                         title_str_d:
+0372 0386 20 5b 43 4f 4e 57          fcc " [CONWAY'S GAME OF LIFE] GEN: "
+     41 59 27 53 20 47
+     41 4d 45 20 4f 46
+     20 4c 49 46 45 5d
+     20 47 45 4e 3a 20
+0373 03a4 04                         fcb 4
+0374                         skiptitle_str_d:
+0375 03a5 1b 5b 33 30 43 04          fcb esc,'[,'3,'0,'C,4
+0376                         gen_str_d:
+0377 03ab 47 45 4e 3a 20             fcc "GEN: "
+0378 03b0 04                         fcb 4
+0379 03b1 0d 0a 04           crlf_d: fcb 13,10,4
+0380                         gen_ctr:
+0381 03b4 00 00 00 00                fcb 0,0,0,0 ; 4byte bcd
+0382                         temp_word:
+0383 03b8 00 00                      fcb 0,0
+0384                         curr_bufp:
+0385 03ba 00 00                      fcb 0,0
+0386                         next_bufp:
+0387 03bc 00 00                      fcb 0,0
+0388                         curr_adrs:
+0389 03be 00 00                      fcb 0,0
+0390                         next_adrs:
+0391 03c0 00 00                      fcb 0,0
+0392                         curr_off:
+0393 03c2 00                         fcb 0
+0394                         next_off:
+0395 03c3 00                         fcb 0
+0396                         * update algorithm variables
+0397 03c4 00                 ka:     fcb 0
+0398 03c5 00                 kb:     fcb 0
+0399 03c6 00                 kc:     fcb 0
+0400 03c7 00                 kd:     fcb 0
+0401 03c8 00                 ke:     fcb 0
+0402 03c9 00                 kf:     fcb 0
+0403 03ca 00                 kg:     fcb 0
+0404 03cb 00                 kh:     fcb 0
+0405 03cc 00                 s2:     fcb 0
+0406 03cd 00                 s3:     fcb 0
+0407 03ce 00                 xab:    fcb 0
+0408 03cf 00                 xcd:    fcb 0
+0409 03d0 00                 xef:    fcb 0
+0410 03d1 00                 xgh:    fcb 0
+0411                         *
+0412                         screen_buf_init:
+0413 03d2 00 00 00 00                fcb $00,$00,$00,$00
+0414 03d6 20 00 20 00                fcb $20,$00,$20,$00
+0415 03da 10 00 10 00                fcb $10,$00,$10,$00
+0416 03de 70 00 70 00                fcb $70,$00,$70,$00
+0417 03e2 00 20 00 20                fcb $00,$20,$00,$20
+0418 03e6 00 10 00 10                fcb $00,$10,$00,$10
+0419 03ea 00 70 00 70                fcb $00,$70,$00,$70
+0420 03ee 20 00 20 00                fcb $20,$00,$20,$00
+0421 03f2 10 00 10 00                fcb $10,$00,$10,$00
+0422 03f6 70 00 70 00                fcb $70,$00,$70,$00
+0423 03fa 00 20 00 20                fcb $00,$20,$00,$20
+0424 03fe 00 10 00 10                fcb $00,$10,$00,$10
+0425 0402 00 70 00 70                fcb $00,$70,$00,$70
+0426 0406 00 00 00 00                fcb $00,$00,$00,$00
+0427 040a 00 00 00 00                fcb $00,$00,$00,$00
+0428 040e 00 00 00 00                fcb $00,$00,$00,$00
+0429                         *
+0430 0500                    var:    org $0500
+0431                         screen_buf1:
+0432 0500                            rmb buf_len ; 32x16 bits = 64 bytes
+0433                         screen_buf2:
+0434 0540                            rmb buf_len
+0435                                 end
+bheight    0010
+blen_mask  0003
+buf_len    0040
+bwidth     0020
+crlf_d     03b1
+curr_adrs  03be
+curr_bufp  03ba
+curr_off   03c2
+esc        001b
+gen_ctr    03b4
+gen_str_d  03ab
+gen_update 01c6
+get3frames 029e
+inc_gen_ctr 02c5
+init_scr1  014b
+init_screen 013d
+ka         03c4
+kb         03c5
+kc         03c6
+kd         03c7
+ke         03c8
+kf         03c9
+kg         03ca
+kh         03cb
+linebyte   0004
+loop       012e
+mirr4      0177
+mirr5      0192
+mirr_leftrt 017d
+mirr_topbtm 0166
+mirror_edges 0161
+next_adrs  03c0
+next_bufp  03bc
+next_off   03c3
+out2h      e0bf
+outch      e075
+pdata1     e07e
+print_gen_ctr 02b2
+print_screen 02eb
+read_position 030f
+rp0        031e
+rp1        0320
+rp2        032b
+rp20       0329
+rp3        0333
+rp4        0344
+s2         03cc
+s3         03cd
+screen_buf1 0500
+screen_buf2 0540
+screen_buf_init 03d2
+screen_clr1_d 036f
+screen_clr_d 036a
+screen_home1_d 037a
+screen_home_d 0373
+skip8_d    0381
+skiptitle_str_d 03a5
+swap_buffer 0357
+temp_word  03b8
+title_str_d 0386
+upd_b1     023e
+upd_b21    0259
+upd_b22    0265
+upd_b3     026b
+upd_bit    0237
+upd_byte   0230
+update0    01ce
+update1    01da
+update2    01e6
+update3    0210
+update4    029d
+update_loop1 01e1
+var        0412
+xab        03ce
+xcd        03cf
+xef        03d0
+xgh        03d1
+bheight    0010 *0016 0017 0082 
+blen_mask  0003 *0018 0337 0338 
+buf_len    0040 *0017 0049 0070 0071 0108 0113 0114 0122 0127 0128 
+                      0252 0348 0432 0434 
+bwidth     0020 *0015 
+crlf_d     03b1 *0379 0340 
+curr_adrs  03be *0388 0046 0051 0054 0145 0155 0167 0172 0185 0208 
+                      0230 0238 0244 0313 0316 0342 0344 
+curr_bufp  03ba *0384 0022 0047 0066 0077 0106 0138 0312 0353 0356 
+curr_off   03c2 *0392 0140 0248 0250 0314 0335 0345 0347 
+esc        001b *0013 0362 0364 0366 0368 0370 0375 
+gen_ctr    03b4 *0380 0026 0027 0028 0029 0275 0283 0287 0288 0291 
+                      0292 0295 0296 0299 
+gen_str_d  03ab *0376 
+gen_update 01c6 *0137 0039 
+get3frames 029e *0258 0161 0168 0178 
+inc_gen_ctr 02c5 *0282 0274 
+init_scr1  014b *0050 0060 
+init_screen 013d *0044 0036 
+ka         03c4 *0397 0163 0192 
+kb         03c5 *0398 0165 
+kc         03c6 *0399 0166 
+kd         03c7 *0400 0170 
+ke         03c8 *0401 0171 
+kf         03c9 *0402 0180 
+kg         03ca *0403 0182 
+kh         03cb *0404 0183 
+linebyte   0004 *0014 0017 0018 0067 0069 0070 0071 0071 0078 0086 
+                      0091 0098 0107 0114 0121 0122 0127 0128 0128 0129 0134 
+                      0139 0147 0156 0173 0251 0336 
+loop       012e *0037 0041 
+mirr4      0177 *0079 0081 
+mirr5      0192 *0099 0101 
+mirr_leftrt 017d *0083 0104 
+mirr_topbtm 0166 *0068 0075 
+mirror_edges 0161 *0063 0037 
+next_adrs  03c0 *0390 0152 0212 0219 0224 0245 0247 
+next_bufp  03bc *0386 0024 0146 0355 0358 
+next_off   03c3 *0394 
+out2h      e0bf *0010 0276 0277 0278 0279 
+outch      e075 *0008 0330 
+pdata1     e07e *0009 0031 0033 0035 0304 0306 0309 0311 0320 0341 
+print_gen_ctr 02b2 *0273 0307 
+print_screen 02eb *0302 0038 
+read_position 030f *0315 0349 
+rp0        031e *0322 0318 
+rp1        0320 *0323 0334 
+rp2        032b *0330 0328 
+rp20       0329 *0329 0326 
+rp3        0333 *0335 0321 
+rp4        0344 *0342 0339 
+s2         03cc *0405 
+s3         03cd *0406 
+screen_buf1 0500 *0431 0021 
+screen_buf2 0540 *0433 0023 
+screen_buf_init 03d2 *0412 0045 
+screen_clr1_d 036f *0363 0310 
+screen_clr_d 036a *0361 0030 
+screen_home1_d 037a *0367 0308 
+screen_home_d 0373 *0365 0032 0303 
+skip8_d    0381 *0369 0319 
+skiptitle_str_d 03a5 *0374 0305 
+swap_buffer 0357 *0352 0040 
+temp_word  03b8 *0382 0048 0055 0058 0162 0164 0169 0179 0181 0187 
+                      0239 0262 0265 0354 0357 
+title_str_d 0386 *0371 0034 
+upd_b1     023e *0200 0198 
+upd_b21    0259 *0216 0207 
+upd_b22    0265 *0223 0211 0218 
+upd_b3     026b *0227 0215 0222 
+upd_bit    0237 *0194 0204 
+upd_byte   0230 *0189 0236 
+update0    01ce *0141 0144 
+update1    01da *0148 0151 
+update2    01e6 *0157 0160 
+update3    0210 *0174 0177 
+update4    029d *0255 0253 
+update_loop1 01e1 *0154 0254 
+var        0412 *0430 
+xab        03ce *0407 
+xcd        03cf *0408 
+xef        03d0 *0409 
+xgh        03d1 *0410 
