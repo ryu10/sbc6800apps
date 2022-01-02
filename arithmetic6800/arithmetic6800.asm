@@ -37,9 +37,9 @@ rmdr:       fdb $0000
             ldx r1
             stx r102
 * test mul ; $5f * $35 = $13ab
-            ldx #$005f
+            ldx #$0001
             stx r1
-            ldx #$0035
+            ldx #$0028
             stx r2
             jsr mul16
             ldx r1
