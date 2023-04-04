@@ -15,7 +15,7 @@ vram_end equ $a200
 vdg_ctl_ad equ $8110
 vdg_mode equ %00000000
 spc equ $20
-greenbase equ $80 (blank char for green dots)
+greenbase equ $80 ; (blank char for green dots)
 *
         org $0200
         ldx #screen_buf1
